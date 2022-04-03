@@ -1,4 +1,4 @@
-package io.umang345.moviecatalogservice.resources;
+package io.umang345.moviecatalogservice.services;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,46 +19,25 @@ import io.umang345.moviecatalogservice.models.Movie;
 import io.umang345.moviecatalogservice.models.Rating;
 import io.umang345.moviecatalogservice.models.UserRating;
 
-@RestController
-@RequestMapping("/catalog")
-public class MovieCatalogResource 
+public class  UserRatingInfo
 {
 	@Autowired
 	private RestTemplate restTemplate;
 	
-	@Autowired
-	MovieInfo movieInfo;
+	@HystrixCommand(fallbackMethod = "getFallbackUserRating")
+	public UserRating getUserRating(String userId)
+	{
+		 return restTemplate.getForObject("http://ratings-data-service/ratingsdata/users/"+userId
+					, UserRating.class);
+	}
 	
-	@Autowired
-	UserRatingInfo userRatingInfo;
-	
-	@GetMapping("/{userId}")
-	public List<CatalogItem> getCatalog(@PathVariable("userId") String userId)
-	{ 
-		
-		//Get all rated movie IDS
-		UserRating ratings = movieInfo.getUserRating(userId);
-		
-		return ratings.getUserRating().stream().map(rating -> 
-		{
-			return userRatingInfo.getCatalogItem(rating);
-		})
-		.collect(Collectors.toList());
-		 
+	public UserRating getFallbackUserRating(String userId)
+	{
+		 UserRating userRating = new UserRating();
+		 userRating.setUserId(userId);
+		 userRating.setUserRating(Arrays.asList(
+			new Rating("0",0)	 
+		 ));
+		 return userRating;
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

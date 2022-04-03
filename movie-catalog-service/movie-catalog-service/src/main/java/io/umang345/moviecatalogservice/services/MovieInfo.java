@@ -1,4 +1,4 @@
-package io.umang345.moviecatalogservice.resources;
+package io.umang345.moviecatalogservice.services;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,46 +19,23 @@ import io.umang345.moviecatalogservice.models.Movie;
 import io.umang345.moviecatalogservice.models.Rating;
 import io.umang345.moviecatalogservice.models.UserRating;
 
-@RestController
-@RequestMapping("/catalog")
-public class MovieCatalogResource 
+public class MovieInfo 
 {
 	@Autowired
 	private RestTemplate restTemplate;
 	
-	@Autowired
-	MovieInfo movieInfo;
-	
-	@Autowired
-	UserRatingInfo userRatingInfo;
-	
-	@GetMapping("/{userId}")
-	public List<CatalogItem> getCatalog(@PathVariable("userId") String userId)
-	{ 
+	@HystrixCommand(fallbackMethod = "getFallbackCatalogItem")
+	public CatalogItem getCatalogItem(Rating rating)
+	{
+		//For each movie Id, call movie info service and get details
+		Movie movie = restTemplate.getForObject("http://movie-info-service/movies/"+rating.getMovieId(), Movie.class);
 		
-		//Get all rated movie IDS
-		UserRating ratings = movieInfo.getUserRating(userId);
-		
-		return ratings.getUserRating().stream().map(rating -> 
-		{
-			return userRatingInfo.getCatalogItem(rating);
-		})
-		.collect(Collectors.toList());
-		 
+		//Put them all together
+		return new CatalogItem(movie.getName(),"Desc",rating.getRating());
+	}
+	
+	public CatalogItem getFallbackCatalogItem(Rating rating)
+	{
+		return new CatalogItem("Movie name not found","",rating.getRating());
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
